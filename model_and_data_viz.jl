@@ -14,9 +14,9 @@ for w in 1:8
     @variable(oil_model, p)
     @variable(oil_model, out)
 
-    ICNN_formulate!(oil_model, "ICNN_well_$w.json", out, p)
+    ICNN_formulate!(oil_model, "models/ICNN_well_$w.json", out, p)
 
-    df = CSV.read("well_$w.csv", DataFrame)
+    df = CSV.read("data/well_$w.csv", DataFrame)
 
     x_range = LinRange{Float32}(minimum(df.PWH), maximum(df.PWH), 50)
 
@@ -25,7 +25,7 @@ for w in 1:8
     display(scatter!(df.PWH, df.QOIL, label="Data"))
 end
 
-df = CSV.read("flowline_1.csv", DataFrame)
+df = CSV.read("data/flowline_1.csv", DataFrame)
 scatter(df.QOIL, df.PDS, markersize=1, label="data", title="FLOWLINE PRESSURE", xlabel="oil flow")
 scatter(df.QGAS, df.PDS, markersize=1, label="data", title="FLOWLINE PRESSURE", xlabel="gas flow")
 scatter(df.QWAT, df.PDS, markersize=1, label="data", title="FLOWLINE PRESSURE", xlabel="water flow")

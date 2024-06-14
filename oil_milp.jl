@@ -87,7 +87,7 @@ oil_model = Model(GLPK.Optimizer)
 
 # 14c
 @variable(oil_model, g[e=Er])
-[ICNN_formulate!(oil_model, "ICNN_flowline_1.json", g[e], q[e, 1], q[e, 2], q[e, 3], p[e[1]]) for e in Er]
+[ICNN_formulate!(oil_model, "models/ICNN_flowline_1.json", g[e], q[e, 1], q[e, 2], q[e, 3], p[e[1]]) for e in Er]
 @constraint(oil_model, [e in Er], p[e[2]] == g[e])
 
 # 14d
@@ -114,7 +114,7 @@ oil_model = Model(GLPK.Optimizer)
 
 # 14h
 @variable(oil_model, f[i=Nw])
-[ICNN_formulate!(oil_model, "ICNN_well_$i.json", f[i], p[i]) for i in Nw]
+[ICNN_formulate!(oil_model, "models/ICNN_well_$i.json", f[i], p[i]) for i in Nw]
 @constraint(oil_model, [i=Nw], sum([q[e, 1] for e in Eout[i]]) == -f[i])
 
 # 14i
