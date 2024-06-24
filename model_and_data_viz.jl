@@ -55,6 +55,7 @@ for model in ["NN", "ICNN"]
 
     if model == "ICNN"
         ICNN_formulate!(oil_model, "models/ICNN_flowline_1.json", pds, qoil, qgas, qwater, pus)
+        # ICNN_formulate!(oil_model, "models/ICNN_flowline_negated.json", pds, qoil, qgas, qwater, pus)
     elseif model == "NN"
         NN_formulate!(oil_model, "models/NN_flowline_1.json", pds, qoil, qgas, qwater, pus; U_in=[maximum(df.QOIL), maximum(df.QGAS), maximum(df.QWAT), maximum(df.PUS)], L_in=[minimum(df.QOIL), minimum(df.QGAS), minimum(df.QWAT), minimum(df.PUS)])
     end
@@ -62,7 +63,7 @@ for model in ["NN", "ICNN"]
     pds = if model == "NN" 
         map(row -> forward_pass_NN!(oil_model, collect(row[2:end-1]), pds, [qoil, qgas, qwater, pus]), eachrow(df))
     elseif model == "ICNN"
-        map(row -> forward_pass_ICNN!(oil_model, collect(row[2:end-1]), pds, [qoil, qgas, qwater, pus]), eachrow(df))
+        map(row -> -forward_pass_ICNN!(oil_model, collect(row[2:end-1]), pds, [qoil, qgas, qwater, pus]), eachrow(df))
     end
 
     scatter(df.QOIL, df.PDS, markersize=2, markerstrokewidth=0, label="data", title="FLOWLINE", xlabel="oil flow", ylabel="downstream pressure")
@@ -78,3 +79,14 @@ for model in ["NN", "ICNN"]
     display(scatter!(df.PUS, pds, markersize=2, markerstrokewidth=0, label=model))
 
 end
+
+### ONLY FLOWLINE DATA ###
+df = CSV.read("data/flowline_1.csv", DataFrame)
+
+scatter(df.QOIL, -df.PDS, markersize=2, markerstrokewidth=0, label="data", title="FLOWLINE", xlabel="oil flow", ylabel="downstream pressure")
+
+scatter(df.QGAS, -df.PDS, markersize=2, markerstrokewidth=0, label="data", title="FLOWLINE", xlabel="gas flow", ylabel="downstream pressure")
+
+scatter(df.QWAT, -df.PDS, markersize=2, markerstrokewidth=0, label="data", title="FLOWLINE", xlabel="water flow", ylabel="downstream pressure")
+
+scatter(df.PUS, -df.PDS, markersize=2, markerstrokewidth=0, label="data", title="FLOWLINE", xlabel="upstream pressure", ylabel="downstream pressure")
