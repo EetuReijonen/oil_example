@@ -56,13 +56,16 @@ Q_OIL = [ # oil flow bounds from the wells
 
 ]
 
-Q_GAS = (0.024000, 1.92000) # gas flow bounds at each node ??
+Q_GAS = (0.0, 10.0) # gas flow bounds from the wells
+# totally redundant because the GOR and WOR constraints lock the water and gas flow to the oil flow
 
-Q_WATER = (0.000000, 0.96000) # water flow bounds at each node ??
+Q_WATER = (0.0, 10.0) # water flow bounds from the wells
+# totally redundant because the GOR and WOR constraints lock the water and gas flow to the oil flow
 
 GOR = [1053.0, 805.0, 789.0, 790.0, 633.0, 745.0, 742.0, 759.0] .* 0.001 # gas-oil ratio
 
-WOR = [12.7, 23.7, 41.7, 55.4, 54.81, 27.0, 0, 0] # water-oil ratio
+WCT = [12.7, 23.7, 41.7, 55.4, 54.81, 27.0, 0, 0] * 0.01 # water contents
+WOR = map(wct -> wct/(1-wct), WCT) # water-oil ratio
 
 P_SEP = [0.20, 0.30] # separator pressures
 
@@ -71,6 +74,8 @@ P_SEP = [0.20, 0.30] # separator pressures
 using JuMP
 using Gurobi
 using JSON
+
+use_ICNN_models = true
 
 include("ICNN_to_LP.jl")
 
@@ -89,8 +94,12 @@ set_silent(oil_model)
 
 # 14c
 @variable(oil_model, g[e=Er])
-# [ICNN_formulate!(oil_model, "models/ICNN_flowline_1.json", g[e], q[e, 1], q[e, 2], q[e, 3], p[e[1]]) for e in Er]
-[NN_formulate!(oil_model, "models/NN_flowline_1.json", g[e], q[e, 1], q[e, 2], q[e, 3], p[e[1]]; U_in=[1.8, 1.92, 0.96, 2.09987], L_in=[0.0, 0.024, 0.0, 0.299867]) for e in Er]
+if use_ICNN_models
+    [ICNN_formulate!(oil_model, "models/ICNN_flowline_1.json", g[e], q[e, 1], q[e, 2], q[e, 3], p[e[1]]) for e in Er]
+else
+    # TODO unoptimized code, bounds are recalculated both the same model twice
+    [NN_formulate!(oil_model, "models/NN_flowline_1.json", g[e], q[e, 1], q[e, 2], q[e, 3], p[e[1]]; U_in=[1.8, 1.92, 0.96, 2.09987], L_in=[0.0, 0.024, 0.0, 0.299867]) for e in Er] # these bounds are from the dataset that was used to train the flowline models
+end
 @constraint(oil_model, [e in Er], p[e[2]] == g[e])
 
 # 14d
@@ -117,8 +126,11 @@ set_silent(oil_model)
 
 # 14h
 @variable(oil_model, f[i=Nw])
-[ICNN_formulate!(oil_model, "models/ICNN_well_$i.json", f[i], p[i]) for i in Nw]
-# [NN_formulate!(oil_model, "models/NN_well_$i.json", f[i], p[i]; U_in=P_LIMS[i][2], L_in=P_LIMS[i][1]) for i in Nw]
+if use_ICNN_models
+    [ICNN_formulate!(oil_model, "models/ICNN_well_$i.json", f[i], p[i]) for i in Nw]
+else
+    [NN_formulate!(oil_model, "models/NN_well_$i.json", f[i], p[i]; U_in=P_LIMS[i][2], L_in=P_LIMS[i][1]) for i in Nw]
+end
 @constraint(oil_model, [i=Nw], sum([q[e, 1] for e in Eout[i]]) == -f[i])
 
 # 14i
