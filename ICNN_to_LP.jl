@@ -83,7 +83,7 @@ Calculates the forward pass through the ICNN (the output that is produced with t
 - `input_vars`: references to the ICNN input variables
 
 """
-function forward_pass_ICNN!(jump, input, output_var, input_vars)
+function forward_pass_ICNN!(jump, input, output_var, input_vars...)
 
     input_var = [var for var in input_vars]
     [fix(input_var[neuron], input[neuron]) for neuron in eachindex(input)]
