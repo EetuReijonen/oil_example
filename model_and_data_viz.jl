@@ -3,9 +3,7 @@ using DataFrames
 using Plots
 using JuMP
 using Gurobi
-using JSON
-
-include("ICNN_to_LP.jl")
+using Gogeta
 
 ### WELL PRESSURE CURVES ###
 

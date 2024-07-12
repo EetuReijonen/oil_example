@@ -71,11 +71,10 @@ P_SEP = [0.20, 0.30] # separator pressures
 
 ### JUMP MODEL ###
 
+using Revise
 using JuMP
 using Gurobi
-using JSON
-
-include("ICNN_to_LP.jl")
+using Gogeta
 
 oil_model = Model(Gurobi.Optimizer)
 set_silent(oil_model)
@@ -92,10 +91,10 @@ set_silent(oil_model)
 
 # 14c
 @variable(oil_model, g[e=Er])
-[ICNN_formulate!(oil_model, "models/ICNN_flowline_negated.json", g[e], q[e, 1], q[e, 2], q[e, 3], p[e[1]]) for e in Er]
+# [ICNN_formulate!(oil_model, "models/ICNN_flowline_negated.json", g[e], q[e, 1], q[e, 2], q[e, 3], p[e[1]]) for e in Er]
 # TODO unoptimized code, bounds are recalculated for the same model twice
-# [NN_formulate!(oil_model, "models/NN_flowline_1.json", g[e], q[e, 1], q[e, 2], q[e, 3], p[e[1]]; U_in=[1.8, 1.92, 0.96, 2.09987], L_in=[0.0, 0.024, 0.0, 0.299867]) for e in Er] # these bounds are from the dataset that was used to train the flowline models
-@constraint(oil_model, [e in Er], p[e[2]] == -g[e])
+[NN_formulate!(oil_model, "models/NN_flowline_1_small.json", g[e], q[e, 1], q[e, 2], q[e, 3], p[e[1]]; U_in=[1.8, 1.92, 0.96, 2.09987], L_in=[0.0, 0.024, 0.0, 0.299867]) for e in Er] # these bounds are from the dataset that was used to train the flowline models
+@constraint(oil_model, [e in Er], p[e[2]] == g[e])
 
 # 14d
 @constraint(oil_model, [e=Ed], p[e[1]] - p[e[2]] <= (P_LIMS[e[1]][2] - P_LIMS[e[2]][1]) * (1 - y[e]))
@@ -134,42 +133,7 @@ set_silent(oil_model)
 # 14k
 @constraint(oil_model, [i=Ns], p[i] == P_SEP[i-10])
 
-### SOLUTION FROM USING ICNN ###
-
-# well_pressures = [
-#     0.8548195347177672,
-#     0.6838952464484804,
-#     0.8548195347177672,
-#     0.8548195347177672,
-#     0.8548195347177672,
-#     0.6838952464484805,
-#     0.6838952464484805,
-#     0.6838952464484805
-# ]
-
-# well_routing = [
-#     0.0,
-#     1.0,
-#     0.0,
-#     0.0,
-#     0.0,
-#     1.0,
-#     1.0,
-#     1.0,
-#     1.0,
-#     0.0,
-#     1.0,
-#     1.0,
-#     1.0,
-#     0.0,
-#     0.0,
-#     0.0
-# ]
-
 ### SOLUTION ###
-
-# [fix(p[i], well_pressures[i]) for i in 1:8]
-# [fix(y[e], well_routing[i]) for (i, e) in enumerate(Ed)]
 
 objective_function(oil_model)
 unset_silent(oil_model)
@@ -187,44 +151,14 @@ well_flows = ofs[1:8] + ofs[9:end]
 println("Pressures in wells 1-8")
 value.(p[1:8]).data
 
-# TODO automatic checking of the well and flowline functions
-
-# checks that ICNN LP output with the optimal solution values as the input matches the full problem
-# needs to be run separately for each ICNN used in the full problem formulation
-# if all ICNN LPs are feasible and optimal, the full problem has reached the correct solution?
-
-function check_ICNN(filepath, output_value, input_values...; show_output=true, nonnegated=-1)
-    
-    in_values = [val for val in input_values]
-
-    icnn = Model(Gurobi.Optimizer)
-    set_silent(icnn)
-    @objective(icnn, Max, 0)
-
-    @variable(icnn, inputs[1:length(in_values)])
-    @variable(icnn, output)
-
-    ICNN_formulate!(icnn, filepath, output, inputs...)
-    icnn_value = nonnegated * forward_pass_ICNN!(icnn, in_values, output, inputs...)
-
-    show_output && println("Output should be: $output_value")
-    show_output && println("ICNN output with given input: $icnn_value")
-    
-    if icnn_value ≈ output_value
-        show_output && println("ICNN output matches full problem\n")
-        return true
-    else
-        show_output && @warn "ICNN output does not match"
-        return false
-    end
-end
+optimizer = Gurobi.Optimizer
 
 ### WELLS ###
 for w in 1:8
-    check_ICNN("models/ICNN_well_$w.json", well_flows[w], value(p[w]))
+    check_ICNN(optimizer, "models/ICNN_well_$w.json", well_flows[w], value(p[w]); negated=true)
 end
 
 ### FLOWLINES ###
 for e in Er
-    check_ICNN("models/ICNN_flowline_negated.json", value.(p[e[2]]), union(value.(q[e, :]).data, value.(p[e[1]]))...)
+    check_ICNN(optimizer, "models/ICNN_flowline_negated.json", value.(p[e[2]]), union(value.(q[e, :]).data, value.(p[e[1]]))...)
 end
