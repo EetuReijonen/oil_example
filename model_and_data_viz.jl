@@ -19,9 +19,9 @@ for w in 1:8
         df = CSV.read("data/well_$w.csv", DataFrame)
 
         if model == "NN"
-            NN_formulate!(oil_model, "models/NN_well_$w.json", out, p; U_in=maximum(df.PWH), L_in=minimum(df.PWH))
+            NN_incorporate!(oil_model, "models/NN_well_$w.json", out, p; U_in=maximum(df.PWH), L_in=minimum(df.PWH))
         elseif model == "ICNN"
-            ICNN_formulate!(oil_model, "models/ICNN_well_$w.json", out, p)
+            ICNN_incorporate!(oil_model, "models/ICNN_well_$w.json", out, p)
         end
 
         x_range = LinRange{Float32}(minimum(df.PWH), maximum(df.PWH), 50)

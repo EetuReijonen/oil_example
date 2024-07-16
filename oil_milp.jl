@@ -91,9 +91,9 @@ set_silent(oil_model)
 
 # 14c
 @variable(oil_model, g[e=Er])
-# [ICNN_formulate!(oil_model, "models/ICNN_flowline_negated.json", g[e], q[e, 1], q[e, 2], q[e, 3], p[e[1]]) for e in Er]
+# [ICNN_incorporate!(oil_model, "models/ICNN_flowline_negated.json", g[e], q[e, 1], q[e, 2], q[e, 3], p[e[1]]) for e in Er]
 # TODO unoptimized code, bounds are recalculated for the same model twice
-[NN_formulate!(oil_model, "models/NN_flowline_1_small.json", g[e], q[e, 1], q[e, 2], q[e, 3], p[e[1]]; U_in=[1.8, 1.92, 0.96, 2.09987], L_in=[0.0, 0.024, 0.0, 0.299867]) for e in Er] # these bounds are from the dataset that was used to train the flowline models
+[NN_incorporate!(oil_model, "models/NN_flowline_1_small.json", g[e], q[e, 1], q[e, 2], q[e, 3], p[e[1]]; U_in=[1.8, 1.92, 0.96, 2.09987], L_in=[0.0, 0.024, 0.0, 0.299867]) for e in Er] # these bounds are from the dataset that was used to train the flowline models
 @constraint(oil_model, [e in Er], p[e[2]] == g[e])
 
 # 14d
@@ -120,8 +120,8 @@ set_silent(oil_model)
 
 # 14h
 @variable(oil_model, f[i=Nw])
-[ICNN_formulate!(oil_model, "models/ICNN_well_$i.json", f[i], p[i]) for i in Nw]
-# [NN_formulate!(oil_model, "models/NN_well_$i.json", f[i], p[i]; U_in=P_LIMS[i][2], L_in=P_LIMS[i][1]) for i in Nw]
+[ICNN_incorporate!(oil_model, "models/ICNN_well_$i.json", f[i], p[i]) for i in Nw]
+# [NN_incorporate!(oil_model, "models/NN_well_$i.json", f[i], p[i]; U_in=P_LIMS[i][2], L_in=P_LIMS[i][1]) for i in Nw]
 @constraint(oil_model, [i=Nw], sum([q[e, 1] for e in Eout[i]]) == -f[i])
 
 # 14i
